@@ -1,0 +1,7 @@
+flask==3.0.2
+python-dotenv==1.0.1
+supabase==2.3.4
+markdown2==2.4.12
+aiohttp==3.9.3
+beautifulsoup4==4.12.3
+gunicorn==21.2.0 

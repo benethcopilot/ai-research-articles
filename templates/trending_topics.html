@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Trending Topics - AI Research Articles{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Trending Topics</h1>
+    <button id="refresh-topics" class="btn btn-primary">
+        <i class="bi bi-arrow-clockwise"></i> <span id="refresh-text">Refresh Topics</span>
+        <span id="refresh-spinner" class="spinner-border spinner-border-sm d-none" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </span>
+    </button>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div id="topics-container">
+            {% if topics %}
+            <div class="row">
+                {% for topic in topics %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ topic.title }}</h5>
+                            <p class="card-text">{{ topic.description }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="interest-score">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" 
+                                             style="width: {{ topic.interest_score }}%;" 
+                                             aria-valuenow="{{ topic.interest_score }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ "%.1f"|format(topic.interest_score) }}%
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-success select-topic" 
+                                        data-topic-id="{{ topic.id }}"
+                                        data-topic-title="{{ topic.title }}"
+                                        data-topic-description="{{ topic.description }}">
+                                    Select for Article
+                                </button>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    Sources: 
+                                    {% for source in topic.sources.keys() %}
+                                    <span class="badge bg-secondary">{{ source }}</span>
+                                    {% endfor %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted">
+                <p>No trending topics found. Click "Refresh Topics" to fetch new trends.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Selected Topics</h5>
+            </div>
+            <div class="card-body">
+                <div id="selected-topics">
+                    <p class="text-muted">No topics selected yet.</p>
+                </div>
+                <button id="create-articles" class="btn btn-primary w-100" disabled>
+                    Create Articles
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Topic Selection Modal -->
+<div class="modal fade" id="topicModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Article from Topic</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="article-form">
+                    <div class="mb-3">
+                        <label for="research_scope" class="form-label">Research Scope</label>
+                        <select class="form-select" id="research_scope" name="research_scope" required>
+                            <option value="basic">Basic - Quick overview of the topic</option>
+                            <option value="thorough">Thorough - Detailed analysis with multiple sources</option>
+                            <option value="comprehensive">Comprehensive - In-depth research with extensive sources</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="target_length" class="form-label">Target Length</label>
+                        <select class="form-select" id="target_length" name="target_length" required>
+                            <option value="short">Short (~500 words)</option>
+                            <option value="medium">Medium (~1000 words)</option>
+                            <option value="long">Long (~2000 words)</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submit-article">Create Article</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast for notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="refresh-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto">Topic Refresh</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Fetching new trending topics...
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/trending-topics.js') }}"></script>
+{% endblock %} 

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Article Prompt - AI Research Articles{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h1 class="mb-4">Submit New Article Prompt</h1>
+        <form id="submit-prompt-form" method="POST" action="{{ url_for('submit_prompt') }}">
+            <div class="mb-3">
+                <label for="title" class="form-label">Article Title</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="prompt" class="form-label">Research Prompt</label>
+                <textarea class="form-control" id="prompt" name="prompt" rows="4" required
+                          placeholder="Describe what you want the AI to research and write about..."></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="research_scope" class="form-label">Research Scope</label>
+                <select class="form-select" id="research_scope" name="research_scope" required>
+                    <option value="basic">Basic - Quick overview of the topic</option>
+                    <option value="thorough">Thorough - Detailed analysis with multiple sources</option>
+                    <option value="comprehensive">Comprehensive - In-depth research with extensive sources</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="target_length" class="form-label">Target Length</label>
+                <select class="form-select" id="target_length" name="target_length" required>
+                    <option value="short">Short (~500 words)</option>
+                    <option value="medium">Medium (~1000 words)</option>
+                    <option value="long">Long (~2000 words)</option>
+                </select>
+            </div>
+
+            <button type="submit" id="submit-button" class="btn btn-primary">
+                <span id="submit-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                Submit Prompt
+            </button>
+            <a href="{{ url_for('prompts') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+<!-- Toast for notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="submit-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto">Prompt Submission</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Submitting prompt...
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/submit-prompt.js') }}"></script>
+{% endblock %} 

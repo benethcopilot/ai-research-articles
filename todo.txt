@@ -1,0 +1,34 @@
+add support for multiple research sources, writing agent apis, etc.
+    track which options are used, track quality scores
+    make decisions on which to use for future articles based on quality scores, availability, rate limiting, etc.
+
+add integrations to post content on blog sites, stores, etc.
+    don't need to have content viewing coupled to the generator app
+
+develop product manager agent
+    owns a site or group of sites
+    can submit article prompts to the generation system
+    can search directory of generated articles to see if anything fits managed products
+    can delegate requests to social media manager agents
+    looks for affiliate offers that fit site niche and requests content/promotion from support agents
+    analyzes site analytics and suggests changes, delegates any required work to support agents
+
+develop social media manager agent
+    looks at newly generated content
+    creates a plan for social media promotion
+    either posts itself or delegates to social media posting agent if required
+
+ad agents
+    generate creatives
+    post ads to promote products or lead magnets
+
+email marketing agents
+    create email marketing campaigns
+    analyze performance of email marketing campaigns
+    analyze deliverability/list health
+    create followup sequences for lead magnets, including affiliate promotion
+
+niche research agents
+    research highest paying ad cpms, affiliate campaigns, other relevant monetization methods
+    generate and deliver reports to recommend which sites to start next, which monetization methods to use, etc
+    

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} - AI Research Articles{% endblock %}
+
+{% block content %}
+<article>
+    <header class="mb-4">
+        <h1>{{ article.title }}</h1>
+        <div class="metadata mb-3">
+            Research Scope: {{ article.research_scope }} | 
+            Target Length: {{ article.target_length }} | 
+            Created: {{ article.created_at.strftime('%Y-%m-%d %H:%M') }}
+        </div>
+        <div class="alert alert-secondary">
+            Original Prompt: {{ article.prompt }}
+        </div>
+    </header>
+
+    <div class="article-content">
+        {{ content | safe }}
+    </div>
+</article>
+
+<div class="mt-4">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">&larr; Back to Articles</a>
+</div>
+{% endblock %} 
