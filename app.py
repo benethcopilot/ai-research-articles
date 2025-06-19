@@ -215,11 +215,35 @@ def admin_dashboard():
         # Get popular articles
         popular_articles = db.get_popular_articles(limit=10)
         
+        # Format dates for popular articles
+        for article in popular_articles:
+            if isinstance(article.get('created_at'), str):
+                try:
+                    article['created_at'] = datetime.fromisoformat(article['created_at'].replace('Z', '+00:00'))
+                except:
+                    article['created_at'] = None
+        
         # Get performance metrics
         performance_metrics = db.get_performance_metrics()
         
+        # Format dates for performance metrics
+        for metric in performance_metrics:
+            if isinstance(metric.get('created_at'), str):
+                try:
+                    metric['created_at'] = datetime.fromisoformat(metric['created_at'].replace('Z', '+00:00'))
+                except:
+                    metric['created_at'] = None
+        
         # Get articles for moderation
         pending_moderation = db.get_articles_for_moderation(status='pending')
+        
+        # Format dates for moderation records
+        for moderation in pending_moderation:
+            if isinstance(moderation.get('created_at'), str):
+                try:
+                    moderation['created_at'] = datetime.fromisoformat(moderation['created_at'].replace('Z', '+00:00'))
+                except:
+                    moderation['created_at'] = None
         
         return render_template('admin_dashboard.html',
                              popular_articles=popular_articles,

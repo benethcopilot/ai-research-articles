@@ -121,7 +121,11 @@
                                         </td>
                                         <td>
                                             <small class="text-muted">
-                                                {{ article.created_at.strftime('%m/%d/%Y') if article.created_at else 'N/A' }}
+                                                {% if article.created_at %}
+                                                    {{ article.created_at.strftime('%m/%d/%Y') }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
                                             </small>
                                         </td>
                                     </tr>
@@ -186,7 +190,11 @@
                                         </td>
                                         <td>
                                             <small class="text-muted">
-                                                {{ metric.created_at.strftime('%m/%d %H:%M') if metric.created_at else 'N/A' }}
+                                                {% if metric.created_at %}
+                                                    {{ metric.created_at.strftime('%m/%d %H:%M') }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
                                             </small>
                                         </td>
                                     </tr>
@@ -246,7 +254,11 @@
                                         </td>
                                         <td>
                                             <small class="text-muted">
-                                                {{ moderation.created_at.strftime('%B %d, %Y') if moderation.created_at else 'N/A' }}
+                                                {% if moderation.created_at %}
+                                                    {{ moderation.created_at.strftime('%B %d, %Y') }}
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
                                             </small>
                                         </td>
                                         <td>
