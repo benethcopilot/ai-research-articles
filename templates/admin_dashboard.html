@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-tachometer-alt me-2"></i>
+            Admin Dashboard
+        </h2>
+        <div>
+            <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-danger">
+                <i class="fas fa-sign-out-alt me-2"></i>
+                Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Popular Articles</h5>
+                            <h3>{{ popular_articles|length }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-fire fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Performance Metrics</h5>
+                            <h3>{{ performance_metrics|length }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">Pending Moderation</h5>
+                            <h3>{{ pending_moderation|length }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">System Health</h5>
+                            <h3>
+                                <i class="fas fa-check-circle"></i>
+                            </h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-heartbeat fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Popular Articles -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-fire me-2"></i>
+                        Most Popular Articles
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if popular_articles %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Views</th>
+                                        <th>Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for article in popular_articles[:10] %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('article', article_id=article.id) }}" 
+                                               class="text-decoration-none">
+                                                {{ article.title[:50] }}{% if article.title|length > 50 %}...{% endif %}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">
+                                                {{ article.get('total_views', 0) }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ article.created_at.strftime('%m/%d/%Y') if article.created_at else 'N/A' }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No analytics data available yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Recent Performance Metrics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if performance_metrics %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Stage</th>
+                                        <th>Agent</th>
+                                        <th>Duration</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for metric in performance_metrics[:10] %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                {{ metric.stage }}
+                                            </span>
+                                        </td>
+                                        <td>{{ metric.agent }}</td>
+                                        <td>
+                                            {% if metric.duration_seconds %}
+                                                {{ (metric.duration_seconds / 60)|round(1) }}m
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if metric.success %}
+                                                <span class="badge bg-success">Success</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Failed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ metric.created_at.strftime('%m/%d %H:%M') if metric.created_at else 'N/A' }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No performance metrics available yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Moderation -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Articles Pending Moderation
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_moderation %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Article</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for moderation in pending_moderation %}
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                <strong>{{ moderation.articles.title }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    {{ moderation.articles.prompt[:100] }}{% if moderation.articles.prompt|length > 100 %}...{% endif %}
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning">
+                                                {{ moderation.status|title }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ moderation.created_at.strftime('%B %d, %Y') if moderation.created_at else 'N/A' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ url_for('article', article_id=moderation.article_id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                                <button class="btn btn-sm btn-success" 
+                                                        onclick="moderateArticle('{{ moderation.article_id }}', 'approved')">
+                                                    <i class="fas fa-check"></i> Approve
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" 
+                                                        onclick="moderateArticle('{{ moderation.article_id }}', 'rejected')">
+                                                    <i class="fas fa-times"></i> Reject
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <p class="text-muted">No articles pending moderation</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('index') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-home me-2"></i>
+                                View All Articles
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('search') }}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-search me-2"></i>
+                                Search Articles
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('trending_topics') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-trending-up me-2"></i>
+                                Trending Topics
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('submit_prompt') }}" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-plus me-2"></i>
+                                Create Article
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function moderateArticle(articleId, status) {
+    if (confirm(`Are you sure you want to ${status} this article?`)) {
+        fetch(`/admin/moderate/${articleId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: status,
+                moderator_notes: prompt('Optional notes:') || ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while moderating the article');
+        });
+    }
+}
+</script>
+{% endblock %} 

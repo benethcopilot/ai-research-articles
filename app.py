@@ -236,6 +236,33 @@ def admin_logout():
     session.pop('admin_authenticated', None)
     return redirect(url_for('index'))
 
+@app.route('/admin/moderate/<article_id>', methods=['POST'])
+def moderate_article(article_id):
+    """Moderate an article (approve/reject)"""
+    if not session.get('admin_authenticated'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.get_json()
+        status = data.get('status')
+        moderator_notes = data.get('moderator_notes', '')
+        
+        if status not in ['approved', 'rejected']:
+            return jsonify({'error': 'Invalid status'}), 400
+        
+        # Update moderation status
+        db.update_moderation_status(
+            article_id=article_id,
+            status=status,
+            moderator_notes=moderator_notes,
+            moderated_by='admin'
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error(f"Error moderating article: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 # ===== EXISTING ROUTES (UPDATED) =====
 
 @app.route('/')

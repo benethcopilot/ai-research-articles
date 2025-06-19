@@ -10,7 +10,23 @@
             Research Scope: {{ article.research_scope }} | 
             Target Length: {{ article.target_length }} | 
             Created: {{ article.created_at.strftime('%Y-%m-%d %H:%M') }}
+            {% if article.analytics %}
+            | Views: {{ article.analytics.total_views }} | 
+            Avg. Reading Time: {{ (article.analytics.avg_reading_time / 60)|round(1) }}min
+            {% endif %}
         </div>
+        
+        <!-- Tags -->
+        {% if article.tags %}
+        <div class="mb-3">
+            {% for tag in article.tags %}
+            <span class="badge me-1" style="background-color: {{ tag.color }};">
+                {{ tag.name }}
+            </span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
         <div class="alert alert-secondary">
             Original Prompt: {{ article.prompt }}
         </div>
@@ -24,4 +40,60 @@
 <div class="mt-4">
     <a href="{{ url_for('index') }}" class="btn btn-secondary">&larr; Back to Articles</a>
 </div>
+
+<script>
+// Track reading time
+let startTime = Date.now();
+let timeSpent = 0;
+
+// Track time spent on page
+setInterval(function() {
+    timeSpent = Math.floor((Date.now() - startTime) / 1000);
+}, 1000);
+
+// Send reading time when user leaves the page
+window.addEventListener('beforeunload', function() {
+    if (timeSpent > 5) { // Only track if user spent more than 5 seconds
+        fetch('/api/track-reading-time', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                article_id: '{{ article.id }}',
+                time_spent_seconds: timeSpent
+            }),
+            keepalive: true
+        });
+    }
+});
+
+// Also track when user becomes inactive
+let lastActivity = Date.now();
+document.addEventListener('mousemove', () => lastActivity = Date.now());
+document.addEventListener('keypress', () => lastActivity = Date.now());
+document.addEventListener('scroll', () => lastActivity = Date.now());
+
+// Check for inactivity every 30 seconds
+setInterval(function() {
+    if (Date.now() - lastActivity > 30000) { // 30 seconds of inactivity
+        // Send current reading time
+        if (timeSpent > 5) {
+            fetch('/api/track-reading-time', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    article_id: '{{ article.id }}',
+                    time_spent_seconds: timeSpent
+                })
+            });
+            // Reset timer
+            startTime = Date.now();
+            timeSpent = 0;
+        }
+    }
+}, 30000);
+</script>
 {% endblock %} 
