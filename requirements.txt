@@ -1,6 +1,6 @@
 flask==3.0.2
 python-dotenv==1.0.1
-supabase==2.3.4
+supabase>=2.4.0
 markdown2==2.4.12
 aiohttp==3.9.3
 beautifulsoup4==4.12.3
