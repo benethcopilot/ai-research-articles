@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory, session
 from database import Database
 import markdown2
 import os
@@ -7,7 +7,10 @@ from datetime import datetime
 import asyncio
 from agent_team import content_team, ArticleCreationService
 from topic_researcher import TopicResearcher
+from tag_generator import TagGenerator
 import logging
+import hashlib
+import uuid
 
 # Load environment variables
 load_dotenv()
@@ -15,6 +18,7 @@ load_dotenv()
 # Get required environment variables
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')  # Simple admin password
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("Missing required environment variables SUPABASE_URL and/or SUPABASE_KEY")
@@ -23,14 +27,28 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 app = Flask(__name__, static_folder='static')
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev')  # Set a secret key for flash messages
 
-# Initialize database and article service
+# Initialize database and services
 db = Database(url=SUPABASE_URL, key=SUPABASE_KEY)
 article_service = ArticleCreationService(db, content_team)
 topic_researcher = TopicResearcher(db)
+tag_generator = TagGenerator()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def get_session_id():
+    """Get or create a session ID for analytics"""
+    if 'session_id' not in session:
+        session['session_id'] = str(uuid.uuid4())
+    return session['session_id']
+
+def get_client_ip():
+    """Get client IP address"""
+    if request.environ.get('HTTP_X_FORWARDED_FOR'):
+        return request.environ['HTTP_X_FORWARDED_FOR'].split(',')[0]
+    else:
+        return request.environ.get('REMOTE_ADDR')
 
 def format_article_dates(article):
     """Format dates in article data for display"""
@@ -52,6 +70,174 @@ async def process_article(article_data):
         app.logger.error(f"Error processing article: {str(e)}")
         raise
 
+# ===== SEARCH ROUTES =====
+
+@app.route('/search')
+def search():
+    """Search articles with filters"""
+    try:
+        query = request.args.get('q', '').strip()
+        tags = request.args.getlist('tags')
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
+        target_length = request.args.get('target_length')
+        
+        # Search articles
+        articles = db.search_articles(
+            query=query,
+            tags=tags if tags else None,
+            date_from=date_from,
+            date_to=date_to,
+            target_length=target_length
+        )
+        
+        # Format dates and add tags for each article
+        formatted_articles = []
+        for article in articles:
+            article = format_article_dates(article)
+            article['tags'] = db.get_article_tags(article['id'])
+            formatted_articles.append(article)
+        
+        # Get suggested tags if there's a query
+        suggested_tags = []
+        if query:
+            suggested_tags = tag_generator.suggest_tags_for_search(query)
+        
+        return render_template('search.html', 
+                             articles=formatted_articles,
+                             query=query,
+                             tags=tags,
+                             date_from=date_from,
+                             date_to=date_to,
+                             target_length=target_length,
+                             suggested_tags=suggested_tags)
+    except Exception as e:
+        app.logger.error(f"Error in search route: {str(e)}")
+        flash(f"Error searching articles: {str(e)}", 'danger')
+        return redirect(url_for('index'))
+
+@app.route('/api/search-suggestions')
+def search_suggestions():
+    """Get search suggestions based on query"""
+    try:
+        query = request.args.get('q', '').strip()
+        if not query or len(query) < 2:
+            return jsonify([])
+        
+        # Get articles that match the query for autocomplete
+        articles = db.search_articles(query=query)
+        suggestions = []
+        
+        # Extract unique titles and add to suggestions
+        for article in articles[:10]:  # Limit to 10 suggestions
+            if article['title'] not in suggestions:
+                suggestions.append(article['title'])
+        
+        return jsonify(suggestions)
+    except Exception as e:
+        app.logger.error(f"Error getting search suggestions: {str(e)}")
+        return jsonify([])
+
+# ===== ANALYTICS ROUTES =====
+
+@app.route('/api/track-view', methods=['POST'])
+def track_view():
+    """Track article view for analytics"""
+    try:
+        data = request.get_json()
+        article_id = data.get('article_id')
+        
+        if not article_id:
+            return jsonify({'error': 'Missing article_id'}), 400
+        
+        # Track the view
+        db.track_article_view(
+            article_id=article_id,
+            session_id=get_session_id(),
+            ip_address=get_client_ip(),
+            user_agent=request.headers.get('User-Agent'),
+            referrer=request.referrer
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error(f"Error tracking view: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/track-reading-time', methods=['POST'])
+def track_reading_time():
+    """Track reading time for analytics"""
+    try:
+        data = request.get_json()
+        article_id = data.get('article_id')
+        time_spent = data.get('time_spent_seconds', 0)
+        
+        if not article_id:
+            return jsonify({'error': 'Missing article_id'}), 400
+        
+        # Track reading time
+        db.track_reading_time(
+            article_id=article_id,
+            session_id=get_session_id(),
+            time_spent_seconds=int(time_spent)
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        app.logger.error(f"Error tracking reading time: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ===== ADMIN ROUTES =====
+
+@app.route('/admin')
+def admin_login():
+    """Admin login page"""
+    return render_template('admin_login.html')
+
+@app.route('/admin/login', methods=['POST'])
+def admin_authenticate():
+    """Authenticate admin user"""
+    password = request.form.get('password')
+    if password == ADMIN_PASSWORD:
+        session['admin_authenticated'] = True
+        return redirect(url_for('admin_dashboard'))
+    else:
+        flash('Invalid password', 'danger')
+        return redirect(url_for('admin_login'))
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    """Admin dashboard"""
+    if not session.get('admin_authenticated'):
+        return redirect(url_for('admin_login'))
+    
+    try:
+        # Get popular articles
+        popular_articles = db.get_popular_articles(limit=10)
+        
+        # Get performance metrics
+        performance_metrics = db.get_performance_metrics()
+        
+        # Get articles for moderation
+        pending_moderation = db.get_articles_for_moderation(status='pending')
+        
+        return render_template('admin_dashboard.html',
+                             popular_articles=popular_articles,
+                             performance_metrics=performance_metrics[:20],  # Last 20 metrics
+                             pending_moderation=pending_moderation)
+    except Exception as e:
+        app.logger.error(f"Error in admin dashboard: {str(e)}")
+        flash(f"Error loading dashboard: {str(e)}", 'danger')
+        return redirect(url_for('admin_login'))
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Logout admin user"""
+    session.pop('admin_authenticated', None)
+    return redirect(url_for('index'))
+
+# ===== EXISTING ROUTES (UPDATED) =====
+
 @app.route('/')
 def index():
     """Show list of all completed articles"""
@@ -63,7 +249,7 @@ def index():
             .order('created_at', desc=True)\
             .execute()
         
-        # Format dates for each article
+        # Format dates and add tags for each article
         articles = []
         for article_data in response.data:
             # Get all versions for this article
@@ -83,7 +269,9 @@ def index():
             
             # Only include properly completed articles
             if has_all_stages:
-                articles.append(format_article_dates(article_data))
+                article_data = format_article_dates(article_data)
+                article_data['tags'] = db.get_article_tags(article_data['id'])
+                articles.append(article_data)
                 
         return render_template('index.html', articles=articles)
     except Exception as e:
@@ -94,6 +282,15 @@ def index():
 def article(article_id):
     """Show a specific article"""
     try:
+        # Track article view
+        db.track_article_view(
+            article_id=article_id,
+            session_id=get_session_id(),
+            ip_address=get_client_ip(),
+            user_agent=request.headers.get('User-Agent'),
+            referrer=request.referrer
+        )
+        
         # Get article details
         article = db.get_article(article_id)
         if not article:
@@ -143,6 +340,12 @@ def article(article_id):
             'updated_at': article.updated_at
         }
         article_data = format_article_dates(article_data)
+        
+        # Get article tags
+        article_data['tags'] = db.get_article_tags(article_id)
+        
+        # Get article analytics
+        article_data['analytics'] = db.get_article_analytics(article_id)
         
         # Convert markdown content to HTML
         html_content = markdown2.markdown(final_version['content'])

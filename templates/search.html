@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Search Articles{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-3 mb-4">
+            <!-- Search Filters -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Search Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('search') }}">
+                        <!-- Text Search -->
+                        <div class="mb-3">
+                            <label for="q" class="form-label">Search Query</label>
+                            <input type="text" class="form-control" id="q" name="q" 
+                                   value="{{ query }}" placeholder="Search articles...">
+                        </div>
+                        
+                        <!-- Tags Filter -->
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">Tags</label>
+                            <input type="text" class="form-control" id="tags-input" 
+                                   placeholder="Enter tags (comma-separated)">
+                            <small class="form-text text-muted">
+                                Separate multiple tags with commas
+                            </small>
+                            {% for tag in tags %}
+                                <input type="hidden" name="tags" value="{{ tag }}">
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Suggested Tags -->
+                        {% if suggested_tags %}
+                        <div class="mb-3">
+                            <label class="form-label">Suggested Tags</label>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for tag in suggested_tags %}
+                                <span class="badge bg-secondary suggested-tag" 
+                                      style="cursor: pointer;" data-tag="{{ tag }}">
+                                    {{ tag }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Date Range -->
+                        <div class="mb-3">
+                            <label class="form-label">Date Range</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input type="date" class="form-control" name="date_from" 
+                                           value="{{ date_from }}" placeholder="From">
+                                </div>
+                                <div class="col-6">
+                                    <input type="date" class="form-control" name="date_to" 
+                                           value="{{ date_to }}" placeholder="To">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Target Length -->
+                        <div class="mb-3">
+                            <label for="target_length" class="form-label">Article Length</label>
+                            <select class="form-select" name="target_length">
+                                <option value="">Any Length</option>
+                                <option value="short" {% if target_length == 'short' %}selected{% endif %}>Short</option>
+                                <option value="medium" {% if target_length == 'medium' %}selected{% endif %}>Medium</option>
+                                <option value="long" {% if target_length == 'long' %}selected{% endif %}>Long</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Search</button>
+                        <a href="{{ url_for('search') }}" class="btn btn-outline-secondary w-100 mt-2">Clear Filters</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-9">
+            <!-- Search Results -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Search Results</h2>
+                <span class="text-muted">{{ articles|length }} articles found</span>
+            </div>
+            
+            {% if query or tags or date_from or date_to or target_length %}
+                <!-- Active Filters Display -->
+                <div class="mb-3">
+                    <h6>Active Filters:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if query %}
+                        <span class="badge bg-primary">
+                            Query: "{{ query }}"
+                        </span>
+                        {% endif %}
+                        {% for tag in tags %}
+                        <span class="badge bg-success">
+                            Tag: {{ tag }}
+                        </span>
+                        {% endfor %}
+                        {% if date_from %}
+                        <span class="badge bg-info">
+                            From: {{ date_from }}
+                        </span>
+                        {% endif %}
+                        {% if date_to %}
+                        <span class="badge bg-info">
+                            To: {{ date_to }}
+                        </span>
+                        {% endif %}
+                        {% if target_length %}
+                        <span class="badge bg-warning">
+                            Length: {{ target_length|title }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if articles %}
+                <!-- Articles List -->
+                <div class="row">
+                    {% for article in articles %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <a href="{{ url_for('article', article_id=article.id) }}" 
+                                       class="text-decoration-none">
+                                        {{ article.title }}
+                                    </a>
+                                </h5>
+                                <p class="card-text text-muted">
+                                    {{ article.prompt[:150] }}{% if article.prompt|length > 150 %}...{% endif %}
+                                </p>
+                                
+                                <!-- Tags -->
+                                {% if article.tags %}
+                                <div class="mb-2">
+                                    {% for tag in article.tags %}
+                                    <span class="badge bg-secondary me-1" style="background-color: {{ tag.color }}!important;">
+                                        {{ tag.name }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Article Meta -->
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        {{ article.created_at.strftime('%B %d, %Y') }}
+                                    </small>
+                                    <div class="text-end">
+                                        <span class="badge bg-light text-dark">
+                                            {{ article.target_length|title }}
+                                        </span>
+                                        <span class="badge bg-light text-dark">
+                                            {{ article.research_scope|title }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- No Results -->
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-search fa-3x text-muted"></i>
+                    </div>
+                    <h4>No articles found</h4>
+                    <p class="text-muted">
+                        {% if query or tags or date_from or date_to or target_length %}
+                            Try adjusting your search filters or 
+                            <a href="{{ url_for('search') }}">clear all filters</a>.
+                        {% else %}
+                            Start by entering a search query or selecting filters.
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                        Browse All Articles
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle suggested tags
+    document.querySelectorAll('.suggested-tag').forEach(tag => {
+        tag.addEventListener('click', function() {
+            const tagValue = this.dataset.tag;
+            const tagsInput = document.getElementById('tags-input');
+            const currentTags = tagsInput.value.split(',').map(t => t.trim()).filter(t => t);
+            
+            if (!currentTags.includes(tagValue)) {
+                currentTags.push(tagValue);
+                tagsInput.value = currentTags.join(', ');
+            }
+        });
+    });
+    
+    // Handle tags input
+    document.getElementById('tags-input').addEventListener('change', function() {
+        const form = this.closest('form');
+        const existingTagInputs = form.querySelectorAll('input[name="tags"]');
+        existingTagInputs.forEach(input => input.remove());
+        
+        const tags = this.value.split(',').map(t => t.trim()).filter(t => t);
+        tags.forEach(tag => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'tags';
+            hiddenInput.value = tag;
+            form.appendChild(hiddenInput);
+        });
+    });
+    
+    // Set initial tags input value
+    const existingTags = Array.from(document.querySelectorAll('input[name="tags"]')).map(input => input.value);
+    if (existingTags.length > 0) {
+        document.getElementById('tags-input').value = existingTags.join(', ');
+    }
+});
+</script>
+{% endblock %} 
